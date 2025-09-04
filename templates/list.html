@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Records</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="nav-header">
+        <h1>Oppmøøøte</h1>
+        <nav>
+            <a href="/">Home</a> |
+            <a href="/weekly-view">Weekly View</a> |
+            <a href="/list-view">List View</a>
+        </nav>
+    </header>
+
+    <ul id="records"></ul>
+
+    <script>
+        async function loadAttendance() {
+            const res = await fetch('/data');
+            const records = await res.json();
+            const ul = document.getElementById('records');
+            ul.innerHTML = '';
+            records.forEach(r => {
+                const li = document.createElement('li');
+                li.className = 'record';
+
+                const leftDiv = document.createElement('div');
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'name';
+                nameSpan.textContent = r.name || 'Unknown';
+                const tagSpan = document.createElement('span');
+                tagSpan.className = 'tag';
+                tagSpan.textContent = ` (${r.tag})`;
+
+                leftDiv.appendChild(nameSpan);
+                leftDiv.appendChild(tagSpan);
+
+                const rightDiv = document.createElement('div');
+                const tsSpan = document.createElement('span');
+                tsSpan.className = 'timestamp';
+                tsSpan.textContent = r.timestamp;
+                rightDiv.appendChild(tsSpan);
+
+                li.appendChild(leftDiv);
+                li.appendChild(rightDiv);
+
+                ul.appendChild(li);
+            });
+
+            ul.scrollTop = 0;
+        }
+
+        setInterval(loadAttendance, 5000);
+        loadAttendance();
+    </script>
+</body>
+<footer>
+    Velkommen til kontoret!
+</footer>
+</html>

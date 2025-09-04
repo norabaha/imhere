@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Records</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="nav-header">
+        <h1>Oppmøøøte</h1>
+        <nav>
+            <a href="/">Home</a> |
+            <a href="/weekly-view">Weekly View</a> |
+            <a href="/list-view">List View</a>
+        </nav>
+    </header>
+    <!-- <h2>Ukens vinnere</h2> -->
+    
+    <main>
+        <!-- <h2>Weekly Stats</h2> -->
+        <div class="stats-grid">
+            <section class="stats-card">
+                <h3>Tidligst</h3>
+                <ul id="earliest"></ul>
+            </section>
+
+            <section class="stats-card">
+                <h3>Perfekt oppmøte</h3>
+                <ul id="perfect"></ul>
+            </section>
+
+            <!-- Her kan du lett legge til flere stats-kort -->
+            <!--
+            <section class="stats-card">
+                <h3>Most visits overall</h3>
+                <ul><li>Bob (10)</li></ul>
+            </section>
+            -->
+        </div>
+    </main>
+
+    <footer>
+    Velkommen til kontoret!
+    </footer>
+
+    <script>
+        async function loadStats() {
+            const res = await fetch('/stats');
+            const data = await res.json();
+
+            const earliestList = document.getElementById('earliest');
+            earliestList.innerHTML = '';
+            Object.entries(data.earliest_by_day).forEach(([day, info]) => {
+                const li = document.createElement('li');
+                li.textContent = `${info.name} (${day} ${info.time})`;
+                earliestList.appendChild(li);
+            });
+
+            const perfectList = document.getElementById('perfect');
+            perfectList.innerHTML = '';
+            if (data.perfect_attendance.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = "No one so far 😅";
+                perfectList.appendChild(li);
+            } else {
+                data.perfect_attendance.forEach(name => {
+                    const li = document.createElement('li');
+                    li.textContent = name;
+                    perfectList.appendChild(li);
+                });
+            }
+        }
+
+        loadStats();
+        setInterval(loadStats, 5000);
+    </script>
+</body>
+
+</html>
