@@ -84,6 +84,7 @@ main {
 }
 
 .day-card.today {
+    color: #fff;
     background: #B22222 ;/* #d1e7dd; Lys grønn highlight */
 }
 
@@ -98,6 +99,10 @@ main {
     color: #2c3e50;
     z-index: 1;
     position: relative;
+}
+
+.day-title.today {
+    color: #fff;
 }
 
 .record.unknown .name {

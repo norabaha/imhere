@@ -6,6 +6,8 @@ import threading
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template
 import locale
+import csv
+import logging
 
 ADD_TEST_USERS = False
 
@@ -16,20 +18,57 @@ except:
     try:
         locale.setlocale(locale.LC_TIME, "Norwegian_Norway.1252")  # Windows
     except:
-        print("⚠️ Norsk locale ikke tilgjengelig, faller tilbake til engelsk.")
+        print("Norsk locale ikke tilgjengelig, faller tilbake til engelsk.")
 
 app = Flask(__name__)
 
-# --- TEST users ---
-users = {
-    "1111111111": "Alice",
-    "2222222222": "Bob",
-    "3333333333": "Charlie"
-}
+DB_NAME = "attendance.db"
+
+def add_user(tag, name):
+    """Add a user to the users table if not already present."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO users (tag, name) VALUES (?, ?)", (tag, name))
+    conn.commit()
+    conn.close()
+    
+def add_attendance(tag, timestamp=None):
+    """Add an attendance record for a given tag and optional timestamp."""
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("INSERT INTO attendance (tag, timestamp) VALUES (?, ?)", (tag, timestamp))
+    conn.commit()
+    conn.close()
+
+def import_users_from_file(filename):
+    """Import users from a text or CSV file into the users table."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    with open(filename, encoding='utf-8') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) < 2:
+                continue  # skip invalid lines
+            tag, name = row[0].strip(), row[1].strip()
+            if tag and name:
+                c.execute("INSERT OR IGNORE INTO users (tag, name) VALUES (?, ?)", (tag, name))
+    conn.commit()
+    conn.close()
+
+def get_name(tag):
+    """Fetch the name for a given tag from the users table, or return 'Unknown'."""
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT name FROM users WHERE tag = ?", (tag,))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row and row[0] else "Unknown"
 
 # --- Database Setup ---
 def init_db():
-    conn = sqlite3.connect("attendance.db")
+    conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
 
     # Drop tables if they exist
@@ -52,8 +91,12 @@ def init_db():
         name TEXT
     )
     """)
-
     if ADD_TEST_USERS:
+        users = {
+        "1111111111": "Alice",
+        "2222222222": "Bob",
+        "3333333333": "Charlie"
+        }
         # Insert TEST users if not already present
         for tag, name in users.items():
             c.execute("INSERT OR IGNORE INTO users (tag, name) VALUES (?, ?)", (tag, name))
@@ -68,11 +111,14 @@ def init_db():
     conn.commit()
     conn.close()
 
+    # Import users from file
+    import_users_from_file("users.csv")
+
 
 # --- Flask Route ---
 @app.route('/data')
 def get_data():
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
@@ -90,7 +136,7 @@ def get_data():
 
 @app.route('/weekly')
 def weekly_attendance():
-    conn = sqlite3.connect('attendance.db')
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
@@ -123,7 +169,7 @@ def weekly_attendance():
 
 @app.route('/stats')
 def stats():
-    conn = sqlite3.connect("attendance.db")
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
@@ -190,29 +236,69 @@ def weekly_view():
 
 
 # --- Background RFID Simulation ---
-def rfid_listener():
-    print("RFID listener started. Type tags manually to simulate scans.")
+# def rfid_listener():
+#     print("RFID listener started. Type tags manually to simulate scans, finish with ENTER.")
+#     while True:
+#         tag = input("Scan RFID tag: ").strip()
+#         if not tag:
+#             continue
+#         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#         add_attendance(tag, now)
+#         name = users.get(tag, "Unknown")
+#         print(f"[{now}] {name} ({tag}) scanned.")
+
+def terminal_menu():
     while True:
-        tag = input("Scan RFID tag: ").strip()
-        if not tag:
-            continue
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        conn = sqlite3.connect("attendance.db")
-        c = conn.cursor()
-        c.execute("INSERT INTO attendance (tag, timestamp) VALUES (?, ?)", (tag, now))
-        conn.commit()
-        conn.close()
+        print("Welcome to the RFID system!")
+        print("1: Start RFID listener (scan tags)")
+        print("2: Add new user")
+        # print("3: Exit")
 
-        name = users.get(tag, "Unknown")
-        print(f"[{now}] {name} ({tag}) scanned.")
+        choice = input("Choose an option (1-3): ").strip()
+        if choice == "1":
+            print("RFID listener started. Enter tag manually, press ENTER to register.")
+            while True:
+                tag = input("Scan RFID tag (or 'q' to quit to menu): ").strip()
+                if tag.lower() == 'q':
+                    print("Exiting RFID listener.")
+                    break
+                if not tag:
+                    continue
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                add_attendance(tag, now)
+                name = get_name(tag)
+                print(f"[{now}] {name} ({tag}) registered.")
 
+        elif choice == "2":
+            tag = input("Enter RFID tag: ").strip()
+            name = input("Enter name: ").strip()
+            if tag and name:
+                add_user(tag, name)
+                print(f"User '{name}' with tag '{tag}' added.")
+            else:
+                print("Tag and name must be filled out.")
+
+        # elif choice == "3":
+        #     print("Exiting program.")
+        #     break
+        
+        else:
+            print("Invalid choice. Please try again.")
 
 if __name__ == "__main__":
+    # Suppress Flask debug logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+
     init_db()
 
-    # Start RFID listener in background thread
-    listener_thread = threading.Thread(target=rfid_listener, daemon=True)
-    listener_thread.start()
+    # # Start RFID listener in background thread
+    # listener_thread = threading.Thread(target=rfid_listener, daemon=True)
+    # listener_thread.start()
+
+    # Start terminal menu in background thread
+    menu_thread = threading.Thread(target=terminal_menu, daemon=True)
+    menu_thread.start()
 
     # Run Flask app
-    app.run(debug=True)
+    app.run(debug=False)
