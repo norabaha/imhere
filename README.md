@@ -1,3 +1,7 @@
+#### Dashboard for nysgjerrigperer og masterstudenter med konkurranseinstinkt og/eller motivasjonsvansker
+
+![Skjermbilde](skjermbilde.png)
+
 Bruker Python, Flask, med en SQL database.
 
 Kjør fila app.py
