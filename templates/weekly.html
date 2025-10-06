@@ -18,7 +18,7 @@
     
     <!-- Weekly Attendance Grid -->
     <main>
-        <h2>Ukens oppsummering</h2>
+        <h2>Denne uka</h2>
         <div id="week-grid"></div>
     </main>
     <script>
@@ -55,7 +55,6 @@
                     const nameSpan = document.createElement('span');
                     nameSpan.className = 'name';
 
-                    // nameSpan.textContent = record.name;
                     // Ku-emoji til første som kom denne dagen
                     if(index === 0) {
                         nameSpan.textContent = `${record.name} 🐮`;
@@ -63,12 +62,13 @@
                         nameSpan.textContent = record.name;
                     }
 
-                    const tagSpan = document.createElement('span');
-                    tagSpan.className = 'tag';
-                    tagSpan.textContent = ` (${record.tag})`;
+                    // REMOVED ID TAG FOR CLEANUP
+                    // const tagSpan = document.createElement('span');
+                    // tagSpan.className = 'tag';
+                    // tagSpan.textContent = ` (${record.tag})`;
 
                     rec.appendChild(nameSpan);
-                    rec.appendChild(tagSpan);
+                    // rec.appendChild(tagSpan);
                     card.appendChild(rec);
                 });
 
@@ -76,7 +76,7 @@
             });
         }
 
-        setInterval(loadWeekly, 5000); // refresh every 2 seconds
+        setInterval(loadWeekly, 3000); // refresh every 3 seconds
         loadWeekly();
     </script>
 </body>
