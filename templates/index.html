@@ -59,7 +59,7 @@
             perfectList.innerHTML = '';
             if (data.perfect_attendance.length === 0) {
                 const li = document.createElement('li');
-                li.textContent = "No one so far 😅";
+                li.textContent = "Ingen enda 😅";
                 perfectList.appendChild(li);
             } else {
                 data.perfect_attendance.forEach(name => {
