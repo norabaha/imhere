@@ -146,12 +146,16 @@ def weekly_attendance():
     week_data = {day: {"day_name": "", "records": []} for day in week_days}
 
     c.execute("""
-        SELECT date(a.timestamp) AS day, a.tag, u.name
+        SELECT 
+            DATE(a.timestamp) AS day,
+            a.tag,
+            u.name,
+            MIN(a.timestamp) AS first_time
         FROM attendance a
         LEFT JOIN users u ON a.tag = u.tag
-        WHERE date(a.timestamp) >= ?
+        WHERE DATE(a.timestamp) >= ?
         GROUP BY day, a.tag
-        ORDER BY day ASC
+        ORDER BY day ASC, first_time ASC;
     """, (week_days[0],))
     
     for day in week_days:
